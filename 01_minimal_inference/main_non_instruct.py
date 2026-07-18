@@ -15,7 +15,7 @@ from transformers import (
 )
 
 # (1) config
-MODEL_NAME = "HuggingFaceTB/SmolLM2-360M-Instruct"
+MODEL_NAME = "HuggingFaceTB/SmolLM2-360M"
 DEVICE = (
     "mps"
     if torch.backends.mps.is_available()
@@ -127,11 +127,3 @@ with torch.inference_mode():
             input_ids[0]
         ), end = "\n"
     )
-
-
-# NOTE:
-# Instruct models expect chat-formatted prompts (user/assistant turns). With a raw prompt,
-# the highest-probability next token is often the EOS marker (<|im_end|>), so the loop
-# exits immediately. Base LLMs do not enforce this conversational structure and generally
-# continue autoregressive decoding until EOS or an external circuit breaker (e.g.,
-# max_new_tokens, stop sequences, timeout).
