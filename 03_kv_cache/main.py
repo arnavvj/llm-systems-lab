@@ -108,9 +108,16 @@ with torch.inference_mode():
     next_token_logits = outputs.logits[:, -1, :]
     next_token_id = torch.argmax(next_token_logits, dim=-1, keepdim=True)
     input_ids = torch.cat([input_ids, next_token_id], dim=1)
-    
-    # Cache KVs from the first pass
     past_key_values = outputs.past_key_values
+    print("\nLayers:", len(past_key_values))
+
+    # Cache KVs from the first pass. Analyzing first layer
+    print("\nKV Cache before loop...")
+    print("\tLayer 0: ")
+    layer0 = past_key_values.layers[0]
+    keys, values = layer0.keys, layer0.values
+    print("\t\tKey Shape  :", keys.shape)
+    print("\t\tValue Shape:", values.shape, "\n")
     
     for _ in range(MAX_NEW_TOKENS-1):
 
@@ -121,6 +128,7 @@ with torch.inference_mode():
         )
         # Consistent caching
         past_key_values = outputs.past_key_values
+        print(f"\t\tStep {_+1}: cache length = {past_key_values.layers[0].get_seq_length()}")
 
         next_token_logits = outputs.logits[:, -1, :]
         next_token_id = torch.argmax(next_token_logits, dim=-1, keepdim=True)
@@ -128,6 +136,8 @@ with torch.inference_mode():
 
         if next_token_id.item() == tokenizer.eos_token_id:
             break
+
+print("\nKV cache grows by one token per decoding step.")
 
 end = time.perf_counter()
 kv_ts = end-start
@@ -139,3 +149,12 @@ print(
     f"\nSpeedup: {vanilla_ts/kv_ts:.2f}x"
 )
 
+# Final KV dim check:
+print("\nKV Cache after loop...")
+print("\tLayer 0: ")
+layer0 = past_key_values.layers[0]
+keys, values = layer0.keys, layer0.values
+print("\t\tKey Shape  :", keys.shape)
+print("\t\tValue Shape:", values.shape)
+# (batch_size, num_attention_heads, sequence_length, head_dimension)
+print("\nShape = (batch, heads, seq_len, head_dim)")
