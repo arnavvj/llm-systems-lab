@@ -84,6 +84,8 @@ print("\n4. Next Token decoded:", tokenizer.decode(next_token_id))
 
 
 # (5) Loop for each new token: tokenize -> *forward -> get last logits -> pick best token -> append token -> repeat*
+#                                          ^                                                                       |        
+#                                          |-----------------------------------------------------------------------|
 print("\n\n" + "=" * 60)
 print("\nLOOP...\n")
 MAX_NEW_TOKENS = 20
