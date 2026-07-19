@@ -1,3 +1,14 @@
+"""
+Project 03
+
+KV cache (reuse attention keys/values instead of recomputing the full sequence every step)
+
+Agenda: time the vanilla generation loop vs a KV cached loop using:
+1. use_cache=True + past_key_values
+2. per-step cache growth + shape inspection
+3. speedup comparison
+"""
+
 import time
 import torch
 from transformers import (
