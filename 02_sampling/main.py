@@ -79,9 +79,9 @@ print("\nGreedy Token:", repr(tokenizer.decode(argmax_logits)))
 print("\n\n" + "=" * 60)
 print("\nTEMPERATURE & STOCHASTIC SAMPLING...")
 
-for iter, temperature in enumerate([0.25, 1.1, 1.89]):
+for i, temperature in enumerate([0.25, 1.1, 1.89], start=1):
 
-    print(f"\n{iter+1} Temperature = {temperature}")
+    print(f"\n{i}. Temperature = {temperature}")
 
     scaled_logits = next_token_logits / temperature
     scaled_probs = torch.softmax(scaled_logits, dim=-1)
@@ -90,29 +90,93 @@ for iter, temperature in enumerate([0.25, 1.1, 1.89]):
 
     print("\n\tTop 10 Tokens")
 
-    for rank, (token_id, prob) in enumerate(zip(topk_ids[0], topk_probs[0]), start=1,):
-        token = repr(tokenizer.decode(token_id))
-
-        print("\t"
+    for rank, (token_id, prob) in enumerate(
+        zip(topk_ids[0], topk_probs[0]),
+        start=1,
+    ):
+        print(
+            "\t"
             f"{rank:2}. "
-            f"{token:15} "
+            f"{repr(tokenizer.decode(token_id)):15} "
             f"{prob.item():.6f}"
         )
 
     print(f"\n\tTop-1 Probability: {topk_probs[0][0].item():.6f}")
 
-    sampled = torch.multinomial(scaled_probs, num_samples=1)
+    greedy_token = torch.argmax(scaled_probs, dim=-1)
 
-    print("\tSampled Token:", repr(tokenizer.decode(sampled[0])))
-    
-    print("\n\tGreedy Token:", repr(tokenizer.decode(torch.argmax(probs, dim=-1))))
+    sampled_token = torch.multinomial(
+        scaled_probs,
+        num_samples=1,
+    )
 
-    print("\tOne Sampled Token:", end = "")
-    sampled = torch.multinomial(probs, num_samples=1)
-    print(repr(tokenizer.decode(sampled[0])))
+    print("\tGreedy Token :", repr(tokenizer.decode(greedy_token)))
+    print("\tSampled Token:", repr(tokenizer.decode(sampled_token[0])))
+
 # Temperature controls randomness:
 #   T < 1 -> sharper distribution -> deterministic
 #   T > 1 -> flatter distribution -> diverse
 #
-# Greedy = always highest-probability token.
-# Multinomial sampling randomly draws a token according to the probability distribution, allowing lower-probability tokens to be selected occasionally.
+# Greedy = always highest-probability token (argmax = always pick the winner)
+# Multinomial sampling randomly draws a token according to the probability distribution, 
+# allowing lower-probability tokens to be selected occasionally (multinomial = spin a weighted roulette wheel)
+
+
+# (6) Top-k Sampling
+print("\n\n" + "=" * 60)
+print("\nTOP-K SAMPLING...")
+
+k = 10
+topk_probs, topk_ids = torch.topk(probs, k=k)
+
+# Renormalize because Top-k probabilities no longer sum to 1
+topk_probs = topk_probs / topk_probs.sum(dim=-1, keepdim=True)
+sampled_rank = torch.multinomial(topk_probs, num_samples=1)
+sampled_token_id = topk_ids.gather(dim=-1, index=sampled_rank)
+
+print(f"\nTop-{k} Candidates:\n")
+
+for rank, (token_id, prob) in enumerate(zip(topk_ids[0], topk_probs[0]), start=1):
+    print(
+        f"{rank:2}. "
+        f"{repr(tokenizer.decode(token_id)):15} "
+        f"{prob.item():.6f}"
+    )
+
+print("\nTop-k Sample:", repr(tokenizer.decode(sampled_token_id[0])))
+
+# Top-k keeps only the k highest-probability tokens,
+# renormalizes, then samples from this reduced candidate set.
+
+
+# (7) Top-p (Nucleus) Sampling
+print("\n\n" + "=" * 60)
+print("\nTOP-P SAMPLING...")
+
+p = 0.90
+
+sorted_probs, sorted_ids = torch.sort(probs, descending=True)
+
+cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+
+mask = cumulative_probs <= p
+
+# Always keep the highest-probability token
+mask[..., 0] = True
+
+filtered_probs = sorted_probs * mask
+filtered_probs = filtered_probs / filtered_probs.sum(dim=-1, keepdim=True)
+
+sampled_rank = torch.multinomial(filtered_probs, num_samples=1)
+
+sampled_token_id = sorted_ids.gather(dim=-1, index=sampled_rank)
+
+print(f"\nTop-p = {p}")
+print("Candidate Tokens:", int(mask.sum()))
+print("Sample:", repr(tokenizer.decode(sampled_token_id[0])))
+
+print(f"\nTop-k fixed candidates : {k}")
+print(f"Top-p adaptive candidates : {int(mask.sum())}")
+
+# Keep tokens whose cumulative probability is <= p,
+# renormalize, then sample from this adaptive candidate set.
