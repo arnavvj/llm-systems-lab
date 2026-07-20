@@ -1,3 +1,15 @@
+"""
+Project 02
+
+Sampling strategies (how the next token gets picked from logits)
+
+Agenda: turn last-token logits into a next token using:
+1. softmax + greedy (argmax)
+2. temperature + stochastic (multinomial) sampling
+3. top-k sampling
+4. top-p (nucleus) sampling
+"""
+
 import torch
 from transformers import (
     AutoTokenizer,
