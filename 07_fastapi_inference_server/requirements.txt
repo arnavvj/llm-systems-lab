@@ -1,0 +1,7 @@
+torch>=2.5
+transformers>=4.50
+accelerate
+sentencepiece
+pydantic
+fastapi
+uvicorn
