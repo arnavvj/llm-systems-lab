@@ -1,3 +1,5 @@
+# 07 - FastAPI Inference Server
+
 # Setup
 
 ```bash
