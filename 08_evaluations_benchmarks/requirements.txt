@@ -1,0 +1,9 @@
+torch>=2.5
+transformers>=4.50
+sentencepiece
+accelerate
+
+# Standard libraries for LLM evals
+evaluate
+rouge-score
+sacrebleu
